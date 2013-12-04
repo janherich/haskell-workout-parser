@@ -10,18 +10,20 @@ type Month = Int
 type Day = Int
 
 type Pattern = String
+
 type ParseErrorMsg = String
+
 type FileContent = String
 
-data WorkoutLine = Date SimpleDate | Amounts [Int] | Comment String deriving (Show)
+data WorkoutLine = Date SimpleDate | Amounts [Int] | Comment String
 
-data SimpleDate = SimpleDate Year Month Day deriving (Show, Eq, Ord)
+data SimpleDate = SimpleDate Year Month Day deriving (Eq, Ord)
 
 data Options = Options
     { optShowVersion :: Bool
     , optShowHelp :: Bool
     , optStartDate :: Maybe (Either ParseErrorMsg SimpleDate)
-    , optEndDate :: Maybe (Either ParseErrorMsg SimpleDate) } deriving (Show)
+    , optEndDate :: Maybe (Either ParseErrorMsg SimpleDate) }
 
 usage = "Usage: wparser [-Vhse] [file ...]"
 version = "Haskell wparser 0.1"
