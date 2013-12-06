@@ -6,8 +6,12 @@ import qualified Data.Map as M
 import Data.Char (isSpace)
 import Text.Regex.Posix
 
+-- type synonyms
+
 type Year = Int
+
 type Month = Int
+
 type Day = Int
 
 type Pattern = String
@@ -15,6 +19,8 @@ type Pattern = String
 type ParseErrorMsg = String
 
 type FileContent = String
+
+-- algebraic data type definitions
 
 data WorkoutLine = Date SimpleDate | Amounts [Int] | Comment String
 
@@ -26,18 +32,31 @@ data Options = Options
     , optStartDate :: Maybe (Either ParseErrorMsg SimpleDate)
     , optEndDate :: Maybe (Either ParseErrorMsg SimpleDate) }
 
+-- constants
+
+usage :: String
 usage = "Usage: wparser [-Vhse] [file ...]"
+
+version :: String
 version = "Haskell wparser 0.1"
 
+lineDatePattern :: String
 lineDatePattern = "^#\\s*([0-9]{2}).([0-9]{2}).([0-9]{4})\\s*$"
+
+lineAmountPattern :: String
 lineAmountPattern = "^\\*\\s*([0-9]+).*$"
+
+inputDatePattern :: String
 inputDatePattern = "^([0-9]{2}).([0-9]{2}).([0-9]{4})$"
 
+defaultOptions :: Options
 defaultOptions = Options
     { optShowVersion = False
     , optShowHelp = False
     , optStartDate = Nothing
     , optEndDate = Nothing }
+
+-- program functions
 
 exit :: IO a
 exit = exitSuccess
@@ -71,7 +90,8 @@ processOptions optFns = case foldl (\acc optFn -> optFn acc) defaultOptions optF
                           Options { optStartDate = Just (Left err) } -> putStrLn err >> die
                           Options { optEndDate = Just (Left err) } -> putStrLn err >> die
                           Options { optStartDate = Just (Right startDate)
-                                  , optEndDate = Just (Right endDate) } -> return (\date -> ((`elem` [EQ,LT]) $ startDate `compare` date) && ((`elem` [EQ,GT]) $ endDate `compare` date))
+                                  , optEndDate = Just (Right endDate) } -> return (\date -> ((`elem` [EQ,LT]) $ startDate `compare` date) && 
+                                                                                            ((`elem` [EQ,GT]) $ endDate `compare` date))
                           Options { optStartDate = Just (Right startDate) } -> return ((`elem` [EQ,LT]) . compare startDate)
                           Options { optEndDate = Just (Right endDate) } -> return ((`elem` [EQ,GT]) . compare endDate)
                           Options { optStartDate = Nothing
@@ -90,13 +110,13 @@ convertInputsStream = let convertLine line = case line =~ lineDatePattern :: (St
                       in map convertLine . lines
 
 parseInputs :: [WorkoutLine] -> M.Map SimpleDate [Int]
-parseInputs = let process (map, Date date) (Amounts amounts) = (M.insertWith (++) date amounts map, Date date)
-                  process (map, _) (Date date) = (map, Date date)
-                  process (map, line) _ = (map, line)
+parseInputs = let process (wmap, Date date) (Amounts amounts) = (M.insertWith (++) date amounts wmap, Date date)
+                  process (wmap, _) (Date date) = (wmap, Date date)
+                  process (wmap, line) _ = (wmap, line)
               in fst . foldl process (M.empty, Comment "")
 
 filterWorkoutMap :: (SimpleDate -> Bool) -> M.Map SimpleDate [Int] -> M.Map SimpleDate [Int]
-filterWorkoutMap filterFn = M.filterWithKey (\k v -> filterFn k)
+filterWorkoutMap filterFn = M.filterWithKey (\k _ -> filterFn k)
 
 sumWorkoutMap :: M.Map SimpleDate [Int] -> Int
 sumWorkoutMap = let f acc amounts = acc + sum amounts
@@ -105,6 +125,7 @@ sumWorkoutMap = let f acc amounts = acc + sum amounts
 showSummary :: Int -> String
 showSummary = ("Your workout summary is: " ++) . show
 
+main :: IO ()
 main = do
   args <- getArgs
   (inputPaths, optionFns) <- parseArgs args
