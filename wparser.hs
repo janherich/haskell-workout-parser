@@ -32,7 +32,7 @@ data Options = Options
     , optStartDate :: Maybe (Either ParseErrorMsg SimpleDate)
     , optEndDate :: Maybe (Either ParseErrorMsg SimpleDate) }
 
--- constants
+-- default values
 
 usage :: String
 usage = "Usage: wparser [-Vhse] [file ...]"
@@ -56,6 +56,12 @@ defaultOptions = Options
     , optStartDate = Nothing
     , optEndDate = Nothing }
 
+options :: [OptDescr (Options -> Options)]
+options = [ Option "V" ["version"] (NoArg (\opts -> opts { optShowVersion = True })) "show version number"
+          , Option "h" ["help"] (NoArg (\opts -> opts { optShowHelp = True })) "show help"
+          , Option "s" ["start"] (ReqArg (\str opts -> opts { optStartDate = Just (parseDate inputDatePattern (trim str)) }) "dd.MM.yyyy") "start date"
+          , Option "e" ["end"] (ReqArg (\str opts -> opts { optEndDate = Just (parseDate inputDatePattern (trim str)) }) "dd.MM.yyyy") "end date" ]
+
 -- program functions
 
 exit :: IO a
@@ -71,12 +77,6 @@ parseDate :: Pattern -> String -> Either ParseErrorMsg SimpleDate
 parseDate pattern dateStr = case dateStr =~ pattern :: (String,String,String,[String]) of
                               ("",_,_,day:month:year:[]) -> Right (SimpleDate (read year) (read month) (read day))
                               (str,_,_,_) -> Left ("String '" ++ str ++ "' could not be matched for date")
-
-options :: [OptDescr (Options -> Options)]
-options = [ Option "V" ["version"] (NoArg (\opts -> opts { optShowVersion = True })) "show version number"
-          , Option "h" ["help"] (NoArg (\opts -> opts { optShowHelp = True })) "show help"
-          , Option "s" ["start"] (ReqArg (\str opts -> opts { optStartDate = Just (parseDate inputDatePattern (trim str)) }) "dd.MM.yyyy") "start date"
-          , Option "e" ["end"] (ReqArg (\str opts -> opts { optEndDate = Just (parseDate inputDatePattern (trim str)) }) "dd.MM.yyyy") "end date" ]
 
 parseArgs :: [String] -> IO ([FilePath], [Options -> Options])
 parseArgs args = case getOpt Permute options args of
