@@ -71,7 +71,8 @@ die :: IO a
 die = exitWith (ExitFailure 1)
 
 trim :: String -> String
-trim = let f = reverse . dropWhile isSpace in f . f
+trim = f . f
+    where f = reverse . dropWhile isSpace
 
 parseDate :: Pattern -> String -> Either ParseErrorMsg SimpleDate
 parseDate pattern dateStr = case dateStr =~ pattern :: (String,String,String,[String]) of
@@ -90,7 +91,7 @@ processOptions optFns = case foldl (\acc optFn -> optFn acc) defaultOptions optF
                           Options { optStartDate = Just (Left err) } -> putStrLn err >> die
                           Options { optEndDate = Just (Left err) } -> putStrLn err >> die
                           Options { optStartDate = Just (Right startDate)
-                                  , optEndDate = Just (Right endDate) } -> return (\date -> ((`elem` [EQ,LT]) $ startDate `compare` date) && 
+                                  , optEndDate = Just (Right endDate) } -> return (\date -> ((`elem` [EQ,LT]) $ startDate `compare` date) &&
                                                                                             ((`elem` [EQ,GT]) $ endDate `compare` date))
                           Options { optStartDate = Just (Right startDate) } -> return ((`elem` [EQ,LT]) . compare startDate)
                           Options { optEndDate = Just (Right endDate) } -> return ((`elem` [EQ,GT]) . compare endDate)
@@ -102,25 +103,25 @@ readInputsStream [] = getContents
 readInputsStream filePaths = liftM concat (readFile `mapM` filePaths)
 
 convertInputsStream :: FileContent -> [WorkoutLine]
-convertInputsStream = let convertLine line = case line =~ lineDatePattern :: (String,String,String,[String]) of
-                                               (_,_,_,day:month:year:[]) -> Date (SimpleDate (read year) (read month) (read day))
-                                               _ -> case line =~ lineAmountPattern :: (String,String,String,[String]) of
-                                                      (_,_,_,amount:[]) -> Amounts [read amount]
-                                                      _ -> Comment line
-                      in map convertLine . lines
+convertInputsStream = map convertLine . lines
+    where convertLine line = case line =~ lineDatePattern :: (String,String,String,[String]) of
+                               (_,_,_,day:month:year:[]) -> Date (SimpleDate (read year) (read month) (read day))
+                               _ -> case line =~ lineAmountPattern :: (String,String,String,[String]) of
+                                      (_,_,_,amount:[]) -> Amounts [read amount]
+                                      _ -> Comment line
 
 parseInputs :: [WorkoutLine] -> M.Map SimpleDate [Int]
-parseInputs = let process (wmap, Date date) (Amounts amounts) = (M.insertWith (++) date amounts wmap, Date date)
-                  process (wmap, _) (Date date) = (wmap, Date date)
-                  process (wmap, line) _ = (wmap, line)
-              in fst . foldl process (M.empty, Comment "")
+parseInputs = fst . foldl process (M.empty, Comment "")
+    where process (wmap, Date date) (Amounts amounts) = (M.insertWith (++) date amounts wmap, Date date)
+          process (wmap, _) (Date date) = (wmap, Date date)
+          process (wmap, line) _ = (wmap, line)
 
 filterWorkoutMap :: (SimpleDate -> Bool) -> M.Map SimpleDate [Int] -> M.Map SimpleDate [Int]
 filterWorkoutMap filterFn = M.filterWithKey (\k _ -> filterFn k)
 
 sumWorkoutMap :: M.Map SimpleDate [Int] -> Int
-sumWorkoutMap = let f acc amounts = acc + sum amounts
-                in M.foldl f 0
+sumWorkoutMap = M.foldl f 0
+    where f acc amounts = acc + sum amounts
 
 showSummary :: Int -> String
 showSummary = ("Your workout summary is: " ++) . show
